@@ -1,174 +1,174 @@
-var assert = require("assert"),
-    test = require("./testlib")(),
-    hiredis = require("../hiredis");
+var assert = require('assert'),
+    test = require('./testlib')(),
+    hiredis = require('../hiredis');
 
-test("CreateReader", function() {
+test('CreateReader', function () {
     var reader = new hiredis.Reader();
     assert.notEqual(reader, null);
 });
 
-test("StatusReply", function() {
+test('StatusReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("+OK\r\n");
-    assert.equal("OK", reader.get());
+    reader.feed('+OK\r\n');
+    assert.equal('OK', reader.get());
 });
 
-test("StatusReplyAsBuffer", function() {
+test('StatusReplyAsBuffer', function () {
     var reader = new hiredis.Reader({ return_buffers: true });
-    reader.feed("+OK\r\n");
+    reader.feed('+OK\r\n');
     var reply = reader.get();
     assert.ok(Buffer.isBuffer(reply));
-    assert.equal("OK", reply.toString());
+    assert.equal('OK', reply.toString());
 });
 
-test("IntegerReply", function() {
+test('IntegerReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed(":1\r\n");
+    reader.feed(':1\r\n');
     assert.equal(1, reader.get());
 });
 
-test("LargeIntegerReply", function() {
+test('LargeIntegerReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed(":9223372036854775807\r\n");
+    reader.feed(':9223372036854775807\r\n');
     // We test for a different value here, as JavaScript has no 64-bit integers,
     // only IEEE double precision floating point numbers
-    assert.equal("9223372036854776000", String(reader.get()));
+    assert.equal('9223372036854776000', String(reader.get()));
 });
 
-test("ErrorReply", function() {
+test('ErrorReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("-ERR foo\r\n");
+    reader.feed('-ERR foo\r\n');
     var reply = reader.get();
     assert.equal(Error, reply.constructor);
-    assert.equal("ERR foo", reply.message);
+    assert.equal('ERR foo', reply.message);
 });
 
-test("ErrorReplyWithReturnBuffers", function() {
+test('ErrorReplyWithReturnBuffers', function () {
     var reader = new hiredis.Reader({ return_buffers: true });
-    reader.feed("-ERR foo\r\n");
+    reader.feed('-ERR foo\r\n');
     var reply = reader.get();
     assert.equal(Error, reply.constructor);
-    assert.equal("ERR foo", reply.message);
+    assert.equal('ERR foo', reply.message);
 });
 
-test("NullBulkReply", function() {
+test('NullBulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("$-1\r\n");
+    reader.feed('$-1\r\n');
     assert.equal(null, reader.get());
 });
 
-test("EmptyBulkReply", function() {
+test('EmptyBulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("$0\r\n\r\n");
-    assert.equal("", reader.get());
+    reader.feed('$0\r\n\r\n');
+    assert.equal('', reader.get());
 });
 
-test("BulkReply", function() {
+test('BulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("$3\r\nfoo\r\n");
-    assert.equal("foo", reader.get());
+    reader.feed('$3\r\nfoo\r\n');
+    assert.equal('foo', reader.get());
 });
 
-test("BulkReplyAsBuffer", function() {
+test('BulkReplyAsBuffer', function () {
     var reader = new hiredis.Reader({ return_buffers: true });
-    reader.feed("$3\r\nfoo\r\n");
+    reader.feed('$3\r\nfoo\r\n');
     var reply = reader.get();
     assert.ok(Buffer.isBuffer(reply));
-    assert.equal("foo", reply.toString());
+    assert.equal('foo', reply.toString());
 });
 
-test("BulkReplyWithEncoding", function() {
+test('BulkReplyWithEncoding', function () {
     var reader = new hiredis.Reader();
-    reader.feed("$" + Buffer.byteLength("☃") + "\r\n☃\r\n");
-    assert.equal("☃", reader.get());
+    reader.feed('$' + Buffer.byteLength('☃') + '\r\n☃\r\n');
+    assert.equal('☃', reader.get());
 });
 
-test("NullMultiBulkReply", function() {
+test('NullMultiBulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("*-1\r\n");
+    reader.feed('*-1\r\n');
     assert.equal(null, reader.get());
 });
 
-test("EmptyMultiBulkReply", function() {
+test('EmptyMultiBulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("*0\r\n");
+    reader.feed('*0\r\n');
     assert.deepEqual([], reader.get());
 });
 
-test("MultiBulkReply", function() {
+test('MultiBulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n");
-    assert.deepEqual(["foo", "bar"], reader.get());
+    reader.feed('*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n');
+    assert.deepEqual(['foo', 'bar'], reader.get());
 });
 
-test("NestedMultiBulkReply", function() {
+test('NestedMultiBulkReply', function () {
     var reader = new hiredis.Reader();
-    reader.feed("*2\r\n*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$3\r\nqux\r\n");
-    assert.deepEqual([["foo", "bar"], "qux"], reader.get());
+    reader.feed('*2\r\n*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$3\r\nqux\r\n');
+    assert.deepEqual([['foo', 'bar'], 'qux'], reader.get());
 });
 
-test("DeeplyNestedMultiBulkReply", function() {
+test('DeeplyNestedMultiBulkReply', function () {
     var i;
     var reader = new hiredis.Reader();
     var expected = 1;
 
     for (i = 0; i < 8; i++) {
-      reader.feed("*1\r\n");
-      expected = [expected];
+        reader.feed('*1\r\n');
+        expected = [expected];
     }
 
-    reader.feed(":1\r\n");
+    reader.feed(':1\r\n');
 
     assert.deepEqual(reader.get(), expected);
 });
 
-test("TooDeeplyNestedMultiBulkReply", function() {
+test('TooDeeplyNestedMultiBulkReply', function () {
     var i;
     var reader = new hiredis.Reader();
 
     for (i = 0; i < 9; i++) {
-      reader.feed("*1\r\n");
+        reader.feed('*1\r\n');
     }
 
-    reader.feed(":1\r\n");
+    reader.feed(':1\r\n');
 
-    assert.throws(
-      function() {
+    assert.throws(function () {
         reader.get();
-      },
-      /nested multi/
-    );
+    }, /nested multi/);
 });
 
-test("MultiBulkReplyWithNonStringValues", function() {
+test('MultiBulkReplyWithNonStringValues', function () {
     var reader = new hiredis.Reader();
-    reader.feed("*3\r\n:1\r\n+OK\r\n$-1\r\n");
-    assert.deepEqual([1, "OK", null], reader.get());
+    reader.feed('*3\r\n:1\r\n+OK\r\n$-1\r\n');
+    assert.deepEqual([1, 'OK', null], reader.get());
 });
 
-test("FeedWithBuffer", function() {
+test('FeedWithBuffer', function () {
     var reader = new hiredis.Reader();
-    reader.feed(new Buffer("$3\r\nfoo\r\n"));
-    assert.deepEqual("foo", reader.get());
+    reader.feed(Buffer.from('$3\r\nfoo\r\n'));
+    assert.deepEqual('foo', reader.get());
 });
 
-test("UndefinedReplyOnIncompleteFeed", function() {
+test('UndefinedReplyOnIncompleteFeed', function () {
     var reader = new hiredis.Reader();
-    reader.feed("$3\r\nfoo");
+    reader.feed('$3\r\nfoo');
     assert.deepEqual(undefined, reader.get());
-    reader.feed("\r\n");
-    assert.deepEqual("foo", reader.get());
+    reader.feed('\r\n');
+    assert.deepEqual('foo', reader.get());
 });
 
-test("Leaks", function() {
+test('Leaks', function () {
     /* The "leaks" utility is only available on OSX. */
-    if (process.platform != "darwin") return;
+    if (process.platform != 'darwin') return;
 
     var done = 0;
-    var leaks = require('child_process').spawn("leaks", [process.pid]);
-    leaks.stdout.on("data", function(data) {
+    var leaks = require('child_process').spawn('leaks', [process.pid]);
+    leaks.stdout.on('data', function (data) {
         var str = data.toString();
-        var notice = "Node 0.2.5 always leaks 16 bytes (this is " + process.versions.node + ")";
+        var notice =
+            'Node 0.2.5 always leaks 16 bytes (this is ' +
+            process.versions.node +
+            ')';
         var matches;
         if ((matches = /(\d+) leaks?/i.exec(str)) != null) {
             if (parseInt(matches[1]) > 0) {
@@ -179,7 +179,7 @@ test("Leaks", function() {
         done = 1;
     });
 
-    process.on('exit', function() {
-        assert.ok(done, "Leaks test should have completed");
+    process.on('exit', function () {
+        assert.ok(done, 'Leaks test should have completed');
     });
 });

@@ -1,5 +1,5 @@
 {
-  "name": "hiredis-hapi",
+  "name": "hiredis",
   "description": "Wrapper for reply processing code in hiredis",
   "version": "0.5.1",
   "homepage": "http://github.com/redis/hiredis-node",

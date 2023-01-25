@@ -1,57 +1,57 @@
-var net = require("net"),
+const net = require('net'),
     hiredis = require('bindings')('hiredis.node');
 
-var bufStar = new Buffer("*", "ascii");
-var bufDollar = new Buffer("$", "ascii");
-var bufCrlf = new Buffer("\r\n", "ascii");
+const BUFFER_ENCODING = 'ascii';
+
+const bufStar = Buffer.from('*', BUFFER_ENCODING);
+const bufDollar = Buffer.from('$', BUFFER_ENCODING);
+const bufCrlf = Buffer.from('\r\n', BUFFER_ENCODING);
 
 exports.Reader = hiredis.Reader;
 
-exports.writeCommand = function() {
-    var args = arguments,
-        bufLen = new Buffer(String(args.length), "ascii"),
+exports.writeCommand = function () {
+    let args = arguments,
+        bufLen = Buffer.from(String(args.length), BUFFER_ENCODING),
         parts = [bufStar, bufLen, bufCrlf],
         size = 3 + bufLen.length;
 
-    for (var i = 0; i < args.length; i++) {
+    for (let i = 0; i < args.length; i++) {
         var arg = args[i];
-        if (!Buffer.isBuffer(arg))
-            arg = new Buffer(String(arg));
+        if (!Buffer.isBuffer(arg)) {
+            arg = Buffer.from(String(arg));
+        }
 
-        bufLen = new Buffer(String(arg.length), "ascii");
-        parts = parts.concat([
-            bufDollar, bufLen, bufCrlf,
-            arg, bufCrlf
-        ]);
+        bufLen = Buffer.from(String(arg.length), BUFFER_ENCODING);
+        parts = parts.concat([bufDollar, bufLen, bufCrlf, arg, bufCrlf]);
         size += 5 + bufLen.length + arg.length;
     }
 
     return Buffer.concat(parts, size);
-}
+};
 
-exports.createConnection = function(port, host) {
-    var s = net.createConnection(port || 6379, host);
-    var r = new hiredis.Reader();
-    var _write = s.write;
+exports.createConnection = function (port, host) {
+    var socket = net.createConnection(port || 6379, host);
+    var reader = new hiredis.Reader();
+    var _write = socket.write;
 
-    s.write = function() {
-        var data = exports.writeCommand.apply(this, arguments);
-        return _write.call(s, data);
-    }
+    socket.write = function () {
+        const data = exports.writeCommand.apply(this, arguments);
+        return _write.call(socket, data);
+    };
 
-    s.on("data", function(data) {
+    socket.on('data', function (data) {
         var reply;
-        r.feed(data);
+        reader.feed(data);
         try {
-            while((reply = r.get()) !== undefined)
-                s.emit("reply", reply);
-        } catch(err) {
-            r = null;
-            s.emit("error", err);
-            s.destroy();
+            while ((reply = reader.get()) !== undefined) {
+                socket.emit('reply', reply);
+            }
+        } catch (err) {
+            reader = null;
+            socket.emit('error', err);
+            socket.destroy();
         }
     });
 
-    return s;
-}
-
+    return socket;
+};
